@@ -11,6 +11,29 @@
 
 #include "raylib.h"
 
+typedef struct Sprite {
+     Texture2D texture;
+     Vector2 frameSize;
+     int maxFrame;
+     int framesWide;
+     int frame;
+ } Sprite;
+
+class Player {
+    public:
+        Sprite sprite;
+        bool isRunning = false;
+};
+
+void drawSprite(Sprite* sprite, Vector2 position, Color color) 
+{
+    float ox, oy;
+    ox = (sprite->frame % sprite->framesWide) * sprite->frameSize.x;
+    oy = (int)(sprite->frame / sprite->framesWide) * sprite->frameSize.y;
+
+    DrawTextureRec(sprite->texture, (Rectangle){ox, oy, sprite->frameSize.x,sprite->frameSize.y}, position, color);  
+}
+
 
 int main(void)
 {
@@ -19,19 +42,30 @@ int main(void)
     const int screenWidth = 800;
     const int screenHeight = 450;
 
-    InitWindow(screenWidth, screenHeight, "raylib [texture] example - texture rectangle");
+    InitWindow(screenWidth, screenHeight, "My Game");
 
-    // NOTE: Textures MUST be loaded after Window initialization (OpenGL context is required)
-    Texture2D frog_run = LoadTexture("assets/pixel-adventure/characters/frog/run.png");        // Texture loading
-    Texture2D frog_wall_jump = LoadTexture("assets/pixel-adventure/characters/frog/wall_jump.png");        // Texture loading
+    Vector2 idlePosition = (Vector2){ 300, 360};
+    Vector2 runPosition = (Vector2){ 300, 400};
 
+    Sprite idle = { 0 };
+    idle.texture = LoadTexture("assets/pixel-adventure/characters/pink-dude/idle.png");
+    idle.frameSize = (Vector2){ 32, 32 };
+    idle.maxFrame = 10;
+    idle.framesWide = 11;
+    idle.frame = 0;
 
-    Vector2 position = { 350.0f, 280.0f };
-    Vector2 wall_position = { 350.0f, 320.0f };
+    Sprite run = { 0 };
+    run.texture = LoadTexture("assets/pixel-adventure/characters/pink-dude/run.png");
+    run.frameSize = (Vector2){ 32, 32 };
+    run.maxFrame = 11;
+    run.framesWide = 12;
+    run.frame = 0;
+    
+    Player player;
+    player.sprite = idle;
 
-    Rectangle frameRec = { 0.0f, 0.0f, (float)frog_run.width/12, (float)frog_run.height };
-    Rectangle jump_frameRec = { 0.0f, 0.0f, (float)frog_wall_jump.width/5, (float)frog_wall_jump.height };
-    int currentFrame = 0;
+    int runFrame = 0;
+    int idleFrame = 0;
 
     int framesCounter = 0;
     int framesSpeed = 20;            // Number of spritesheet frames shown by second
@@ -44,16 +78,33 @@ int main(void)
     {
         // Update
         //----------------------------------------------------------------------------------
+        if (IsMouseButtonReleased(MOUSE_LEFT_BUTTON)) 
+        {
+            if (player.isRunning)
+            {
+                player.sprite = idle;
+                player.isRunning = false;
+            } else 
+            {
+                player.sprite = run;
+                player.isRunning = true;
+            }
+        }
+        
         framesCounter++;
         
         if (framesCounter >= (60/framesSpeed))
         {
             framesCounter = 0;
-            currentFrame++;
+            runFrame++;
+            // idleFrame++;
+            player.sprite.frame++;
+            if (runFrame > 11) runFrame = 0;
+            if (player.sprite.frame > player.sprite.maxFrame) player.sprite.frame = 0;
 
-            if (currentFrame > 11) currentFrame = 0;
-
-            frameRec.x = (float)currentFrame*(float)frog_run.width/12;
+            // idle.frame = idleFrame;
+            // player.sprite.frame = idleFrame;
+            run.frame = runFrame;
         }
 
         //----------------------------------------------------------------------------------
@@ -63,13 +114,9 @@ int main(void)
         BeginDrawing();
 
             ClearBackground(RAYWHITE);
-
-            DrawTexture(frog_run, 15, 40, WHITE);
-            DrawTexture(frog_wall_jump, 15, 75, WHITE);
-            DrawRectangleLines(15, 40, frog_run.width, frog_run.height, LIME);
-            DrawRectangleLines(15 + (int)frameRec.x, 40 + (int)frameRec.y, (int)frameRec.width, (int)frameRec.height, RED);
-            DrawTextureRec(frog_run, frameRec, position, WHITE);  // Draw part of the texture
-            DrawTextureRec(frog_wall_jump, frameRec, wall_position, WHITE);  // Draw part of the texture
+            drawSprite(&player.sprite, idlePosition, WHITE);
+            drawSprite(&run, runPosition, WHITE);
+            
 
         EndDrawing();
         //----------------------------------------------------------------------------------
@@ -77,7 +124,8 @@ int main(void)
 
     // De-Initialization
     //--------------------------------------------------------------------------------------
-    UnloadTexture(frog_run);       // Texture unloading
+    UnloadTexture(run.texture);       
+    UnloadTexture(idle.texture);         
 
     CloseWindow();                // Close window and OpenGL context
     //--------------------------------------------------------------------------------------
